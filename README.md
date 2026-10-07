@@ -7,7 +7,7 @@ StreamLink Saver is a Manifest V3 browser extension that writes an HTTP or HTTPS
 Download [**`StreamLinkSaver.zip`**](https://github.com/mhasanbogura/streamlinksaver/releases/latest) from the latest GitHub Release, then extract it. Its folders are arranged as follows:
 
 ```text
-StreamLinkSaver/
+Stream Link Saver/
 ├── Chrome/       # Chrome extension files and Chrome instructions
 └── Firefox/      # Firefox extension files and Firefox instructions
 ```
@@ -16,8 +16,8 @@ Each browser folder includes its own `README.md` and the correct `manifest.json`
 
 | Browser | Folder to open after extraction | Installation method |
 | --- | --- | --- |
-| Chrome | `StreamLinkSaver/Chrome/` | Open `chrome://extensions`, enable **Developer mode**, select **Load unpacked**, then select the `Chrome` folder. |
-| Firefox | `StreamLinkSaver/Firefox/` | Open `about:debugging#/runtime/this-firefox`, select **Load Temporary Add-on**, then select `Firefox/manifest.json`. |
+| Chrome | `Stream Link Saver/Chrome/` | Open `chrome://extensions`, enable **Developer mode**, select **Load unpacked**, then select the `Chrome` folder. |
+| Firefox | `Stream Link Saver/Firefox/` | Open `about:debugging#/runtime/this-firefox`, select **Load Temporary Add-on**, then select `Firefox/manifest.json`. |
 
 ## Use StreamLink Saver
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Build the combined StreamLinkSaver.zip release asset.
 
-Layout inside the zip:
+Layout inside the zip (wrapper has spaces, zip name has none):
 
-    StreamLinkSaver/
+    Stream Link Saver/
     ├── Chrome/       # Chrome extension files + Chrome README
     ├── Firefox/      # Firefox extension files + Firefox README
     └── README.md     # combined package README
@@ -30,7 +30,7 @@ ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "StreamLinkSaver"
 DOCS = ROOT / "docs"
 OUT = ROOT / "StreamLinkSaver.zip"
-WRAP = "StreamLinkSaver"
+WRAP = "Stream Link Saver"
 INSTALL_DIR = Path.home() / "Extensions" / "Stream Link Saver"
 
 SHARED_FILES = [
