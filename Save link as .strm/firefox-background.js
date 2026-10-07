@@ -16,7 +16,17 @@ async function getActiveSaveFolder() {
   return normalizeSavePath(savePath);
 }
 
-function showNotification(message, kind = "saved") {
+async function areNotificationsEnabled() {
+  try {
+    const { notificationsEnabled = true } = await chrome.storage.sync.get({ notificationsEnabled: true });
+    return notificationsEnabled !== false;
+  } catch {
+    return true;
+  }
+}
+
+async function showNotification(message, kind = "saved") {
+  if (!(await areNotificationsEnabled())) return;
   const notificationId = `streamlink-${kind}-${Date.now()}`;
   chrome.notifications.create(notificationId, {
     type: "basic",
@@ -94,7 +104,7 @@ async function setUpMenu() {
   await chrome.contextMenus.removeAll();
   chrome.contextMenus.create({
     id: MENU_ID,
-    title: "Save link as .strm",
+    title: "Save Stream Link",
     contexts: ["link"],
     targetUrlPatterns: ["http://*/*", "https://*/*"],
   });

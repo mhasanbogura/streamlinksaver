@@ -7,6 +7,10 @@ dist/
 build/
 *.dist
 
+# Extension release artifact (built by build-extension-zip.py,
+# published to GitHub Releases as StreamLinkSaver.zip)
+StreamLinkSaver.zip
+
 # Environment variables
 .env
 .env.local

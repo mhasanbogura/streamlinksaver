@@ -1,5 +1,6 @@
 /* Broadcast Atelier: persistent path preference with an explicit Downloads/ default. */
 const input = document.querySelector("#save-path");
+const notificationsInput = document.querySelector("#notifications-enabled");
 const saveButton = document.querySelector("#save-button");
 const resetButton = document.querySelector("#reset-button");
 const status = document.querySelector("#status");
@@ -20,15 +21,20 @@ function setStatus(message, kind = "") {
 }
 
 async function load() {
-  const { savePath = DEFAULT_SAVE_PATH } = await chrome.storage.sync.get({ savePath: DEFAULT_SAVE_PATH });
+  const { savePath = DEFAULT_SAVE_PATH, notificationsEnabled = true } = await chrome.storage.sync.get({
+    savePath: DEFAULT_SAVE_PATH,
+    notificationsEnabled: true,
+  });
   input.value = cleanPath(savePath);
+  notificationsInput.checked = notificationsEnabled !== false;
   setStatus(`Current path: ${input.value}`);
 }
 
 async function save() {
   const savePath = cleanPath(input.value || DEFAULT_SAVE_PATH);
+  const notificationsEnabled = notificationsInput.checked;
   input.value = savePath;
-  await chrome.storage.sync.set({ savePath });
+  await chrome.storage.sync.set({ savePath, notificationsEnabled });
   setStatus(`Saved. Future files will use ${savePath}`, "success");
 }
 
@@ -38,5 +44,6 @@ resetButton.addEventListener("click", async () => {
   setStatus(`Reset to ${input.value}`, "success");
 });
 saveButton.addEventListener("click", () => save().catch(() => setStatus("Could not save this path.", "error")));
+notificationsInput.addEventListener("change", () => save().catch(() => setStatus("Could not save settings.", "error")));
 load().catch(() => setStatus("Could not load settings.", "error"));
 

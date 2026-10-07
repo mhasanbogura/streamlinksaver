@@ -13,6 +13,8 @@ label { display:block; margin:20px 0 9px; font-size:14px; font-weight:500; }
 input { width:100%; border:1px solid var(--line); background:#101010; color:var(--ink); padding:14px; font:14px "DM Mono",monospace; outline:none; }
 input:focus { border-color:var(--red); box-shadow:0 0 0 3px rgba(255,86,48,.13); }
 .hint,#status { color:var(--muted); font-size:13px; line-height:1.55; }
+.switch-row { display:flex; align-items:center; gap:10px; margin:9px 0 0; cursor:pointer; font-size:14px; font-weight:500; }
+.switch-row input[type="checkbox"] { width:18px; height:18px; padding:0; accent-color:var(--red); cursor:pointer; }
 code { color:#e8d6ca; font:12px "DM Mono",monospace; }
 .actions { display:flex; justify-content:flex-end; gap:9px; margin-top:26px; }
 button { border:1px solid var(--red); padding:11px 16px; background:var(--red); color:#1b100d; font:500 12px "DM Mono",monospace; text-transform:uppercase; letter-spacing:.08em; transition:transform 150ms cubic-bezier(.23,1,.32,1),filter 150ms; }

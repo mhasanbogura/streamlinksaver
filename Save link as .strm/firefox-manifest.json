@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "StreamLink Saver",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "Save a media URL from any webpage as a .strm file.",
   "permissions": ["activeTab", "contextMenus", "downloads", "notifications", "storage", "tabs"],
   "background": {
@@ -36,7 +36,7 @@
   },
   "browser_specific_settings": {
     "gecko": {
-      "id": "streamlink-saver@mhasanbogura.github.io",
+      "id": "streamlinksaver@mhasanbogura.github.io",
       "strict_min_version": "109.0"
     }
   }

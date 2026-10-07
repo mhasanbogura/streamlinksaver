@@ -19,6 +19,12 @@
         <label for="save-path">Chrome Downloads-relative path</label>
         <input id="save-path" type="text" autocomplete="off" spellcheck="false" placeholder="Downloads/" />
         <p class="hint">Leave this as <code>Downloads/</code> to save at the root. Use <code>Downloads/Direct Link</code> for a fixed subfolder.</p>
+        <p class="eyebrow" style="margin-top:26px">NOTIFICATIONS</p>
+        <label class="switch-row" for="notifications-enabled">
+          <input id="notifications-enabled" type="checkbox" checked />
+          <span>Show a notification when a link is saved</span>
+        </label>
+        <p class="hint">Turn this off to save silently without pop-up notifications.</p>
         <div class="actions"><button id="reset-button" class="quiet" type="button">Reset</button><button id="save-button" type="button">Save path</button></div>
         <p id="status" role="status">Loading settings…</p>
       </section>

@@ -12,9 +12,9 @@ This folder is the Chrome version of StreamLink Saver. It writes a supported HTT
 
 ## Save a link
 
-Right-click an HTTP or HTTPS media link and choose **Save link as .strm**. You can also open the extension popup, paste a URL, and select **Save link as .strm**.
+Right-click an HTTP or HTTPS media link and choose **Save Stream Link**. You can also open the extension popup, paste a URL, and select **Save Stream Link**.
 
-The default save path is `Downloads/`. Select the settings gear in the popup to choose a persistent Downloads-relative folder. You may also edit `config.js` before loading the extension, then return to `chrome://extensions` and select **Reload**.
+The default save path is `Downloads/`. Select the settings gear in the popup to choose a persistent Downloads-relative folder and to turn save notifications on or off. You may also edit `config.js` before loading the extension, then return to `chrome://extensions` and select **Reload**.
 
 > Use only URLs and media you are authorized to access.
 

@@ -101,7 +101,7 @@ Rebuild or repackage the `extension` folder, then open `chrome://extensions` and
 
 ## 5. Test the deployed handoff
 
-First, confirm that the page loads at your GitHub Pages URL. Then right-click a visible media link and select **Save link as .strm**. The download should use the visible filename with the media extension replaced by `.strm`.
+First, confirm that the page loads at your GitHub Pages URL. Then right-click a visible media link and select **Save Stream Link**. The download should use the visible filename with the media extension replaced by `.strm`.
 
 > **Important:** The current decorative image URLs use Manus-hosted assets. They are not required for the `.strm` handoff, but you should copy or replace those visual assets with repository-hosted files if you want the GitHub Pages interface to look identical.
 
