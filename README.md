@@ -4,7 +4,7 @@ StreamLink Saver is a Manifest V3 browser extension that writes an HTTP or HTTPS
 
 ## Download the browser package
 
-Download [**`StreamLinkSaver.zip`**](https://github.com/mhasanbogura/streamlink-saver/releases/latest) from the latest GitHub Release, then extract it. Its folders are arranged as follows:
+Download [**`StreamLinkSaver.zip`**](https://github.com/mhasanbogura/streamlinksaver/releases/latest) from the latest GitHub Release, then extract it. Its folders are arranged as follows:
 
 ```text
 StreamLinkSaver/

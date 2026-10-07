@@ -16,7 +16,7 @@ export default defineConfig({
 });
 ```
 
-For example, a repository named `streamlink-saver` uses `base: "/streamlink-saver/"`. Do not add this property if your repository itself is named `YOUR-USERNAME.github.io`.
+For example, a repository named `streamlinksaver` uses `base: "/streamlinksaver/"`. Do not add this property if your repository itself is named `YOUR-USERNAME.github.io`.
 
 ## 2. Add the GitHub Pages workflow
 
@@ -91,10 +91,10 @@ After Pages is live, edit `extension/background.js` and replace the current `HOS
 const HOSTED_HANDOFF_URL = "https://YOUR-USERNAME.github.io/YOUR-REPOSITORY/";
 ```
 
-For a repository named `streamlink-saver`, the final value is:
+For a repository named `streamlinksaver`, the final value is:
 
 ```js
-const HOSTED_HANDOFF_URL = "https://YOUR-USERNAME.github.io/streamlink-saver/";
+const HOSTED_HANDOFF_URL = "https://YOUR-USERNAME.github.io/streamlinksaver/";
 ```
 
 Rebuild or repackage the `extension` folder, then open `chrome://extensions` and select **Reload** for StreamLink Saver. The context-menu action will now open your GitHub Pages version in an inactive tab, create the `.strm` file, and close the tab after the handoff.

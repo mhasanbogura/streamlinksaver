@@ -206,8 +206,8 @@ function vitePluginStorageProxy(): Plugin {
 const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector(), vitePluginStorageProxy()];
 
 export default defineConfig({
-  // GitHub Pages project site: https://mhasanbogura.github.io/streamlink-saver/
-  base: "/streamlink-saver/",
+  // GitHub Pages project site: https://mhasanbogura.github.io/streamlinksaver/
+  base: "/streamlinksaver/",
   plugins,
   resolve: {
     alias: {
