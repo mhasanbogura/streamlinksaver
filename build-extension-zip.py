@@ -14,7 +14,7 @@ The output file is ALWAYS named `StreamLinkSaver.zip` so every
 GitHub Release (past and future) uses the same asset name.
 
 Every local build also syncs the package to
-`~/Extensions/StreamLinkSaver/` (skipped automatically when that
+`~/Extensions/Stream Link Saver/` (skipped automatically when that
 folder's parent does not exist, e.g. in CI), so the browser
 always runs the latest build from there.
 
@@ -31,7 +31,7 @@ SRC = ROOT / "StreamLinkSaver"
 DOCS = ROOT / "docs"
 OUT = ROOT / "StreamLinkSaver.zip"
 WRAP = "StreamLinkSaver"
-INSTALL_DIR = Path.home() / "Extensions" / "StreamLinkSaver"
+INSTALL_DIR = Path.home() / "Extensions" / "Stream Link Saver"
 
 SHARED_FILES = [
     "config.js",
@@ -80,7 +80,7 @@ def build() -> Path:
 
 
 def install() -> None:
-    """Copy the built package to ~/Extensions/StreamLinkSaver/.
+    """Copy the built package to ~/Extensions/Stream Link Saver/.
 
     The browser loads the unpacked extension from there, so every
     local build is immediately runnable. Skipped when ~/Extensions
