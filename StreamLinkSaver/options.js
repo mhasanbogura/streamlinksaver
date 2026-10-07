@@ -21,9 +21,9 @@ function setStatus(message, kind = "") {
 }
 
 async function load() {
-  const { savePath = DEFAULT_SAVE_PATH, notificationsEnabled = true } = await chrome.storage.sync.get({
+  const { savePath = DEFAULT_SAVE_PATH, notificationsEnabled = false } = await chrome.storage.sync.get({
     savePath: DEFAULT_SAVE_PATH,
-    notificationsEnabled: true,
+    notificationsEnabled: false,
   });
   input.value = cleanPath(savePath);
   notificationsInput.checked = notificationsEnabled !== false;

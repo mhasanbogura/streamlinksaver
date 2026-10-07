@@ -18,7 +18,7 @@ async function getActiveSaveFolder() {
 
 async function areNotificationsEnabled() {
   try {
-    const { notificationsEnabled = true } = await chrome.storage.sync.get({ notificationsEnabled: true });
+    const { notificationsEnabled = false } = await chrome.storage.sync.get({ notificationsEnabled: false });
     return notificationsEnabled !== false;
   } catch {
     return true;
