@@ -3,6 +3,7 @@ if (typeof importScripts === "function") importScripts("config.js");
 
 const MENU_ID = "streamlink-save-link";
 const HOSTED_HANDOFF_URL = "https://mhasanbogura.github.io/streamlinksaver/";
+const HOSTED_ORIGIN = new URL(HOSTED_HANDOFF_URL).origin;
 const PENDING_SAVES_KEY = "streamlinkPendingSaves";
 const IS_FIREFOX = typeof globalThis.browser?.runtime?.getBrowserInfo === "function";
 const transientStorage = chrome.storage.session || chrome.storage.local;
@@ -135,15 +136,33 @@ async function queueHostedSave(url, filename) {
   return finalPath;
 }
 
+function isOurHandoffDownload(item) {
+  if (!item) return false;
+  // Another extension's own download (e.g. Motrix): never touch it.
+  if (item.byExtensionId && item.byExtensionId !== chrome.runtime.id) return false;
+  if ((item.referrer || "").startsWith(HOSTED_ORIGIN)) return true;
+  if ((item.url || "").startsWith(`blob:${HOSTED_ORIGIN}`)) return true;
+  return false;
+}
+
 if (!IS_FIREFOX && chrome.downloads.onDeterminingFilename) {
-  chrome.downloads.onDeterminingFilename.addListener((_downloadItem, suggest) => {
+  chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
     (async () => {
-      const pending = await getPendingSaves();
-      const next = pending.shift();
+      if (!isOurHandoffDownload(downloadItem)) {
+        suggest();
+        return;
+      }
+      const pending = (await getPendingSaves()).filter((entry) => Date.now() - (entry.createdAt || 0) < 60000);
+      // Match by filename tail so unrelated downloads never consume our queue.
+      const wantedTail = (downloadItem.filename || "").split(/[\\/]/).pop();
+      let index = pending.findIndex((entry) => entry.finalPath.endsWith(wantedTail) && wantedTail);
+      if (index < 0) index = 0;
+      const next = pending[index];
       if (!next) {
         suggest();
         return;
       }
+      pending.splice(index, 1);
       await setPendingSaves(pending);
       suggest({ filename: next.finalPath, conflictAction: "uniquify" });
       showNotification(`Saved to Downloads/${next.finalPath}`);
