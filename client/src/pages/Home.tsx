@@ -7,6 +7,7 @@ const signalFieldUrl = "/manus-storage/streamlink-signal-field_5d5e2101.png";
 const markUrl = `${import.meta.env.BASE_URL}streamlink-link-icon.png`;
 const ZIP_URL = "https://u2l.ai/StreamLinkSaver";
 const FALLBACK_VERSION = "v1.9.10";
+const EXAMPLE_URL = "https://example.com/movie.mp4";
 
 function validUrl(value: string) {
   try {
@@ -49,6 +50,7 @@ export default function Home() {
   const [message, setMessage] = useState("Ready to route a URL.");
   const [extVersion, setExtVersion] = useState(FALLBACK_VERSION);
   const handoffCompleted = useRef(false);
+  const ghostRef = useRef<HTMLDivElement>(null);
   const handoff = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
     const streamUrl = params.get("streamUrl")?.trim() || "";
@@ -57,6 +59,15 @@ export default function Home() {
     return { streamUrl, filename: `${cleanFilename(requestedFilename || deriveFilename(streamUrl))}.strm` };
   }, []);
   const filename = useMemo(() => `${cleanFilename(name)}.strm`, [name]);
+  // Fixed inline suggestion: complete the example URL as dim ghost text.
+  // The field stays fully editable; Tab (or → at the end) accepts it.
+  const suggestion = useMemo(() => {
+    if (!url || url === EXAMPLE_URL) return "";
+    return EXAMPLE_URL.startsWith(url) ? EXAMPLE_URL : "";
+  }, [url]);
+  const acceptSuggestion = () => {
+    if (suggestion) handleUrlChange(suggestion);
+  };
 
   useEffect(() => {
     // Keep the shown version evergreen: prefer the latest GitHub release tag.
@@ -142,7 +153,17 @@ export default function Home() {
               <p className="mt-2 text-xs leading-5 text-[#99948d]">The file stores the URL only. It does not download the media.</p>
 
               <div className="mt-6 flex items-center justify-between"><label htmlFor="source" className="mono text-[9px] tracking-[.14em] text-[#aaa49c]">SOURCE URL</label><button type="button" onClick={() => handleUrlChange("https://example.com/movie.mp4")} className="mono text-[9px] text-[#ded7cc] hover:text-[#ff8062]">Use example</button></div>
-              <div className={`mt-2 flex items-center gap-2 border bg-black/20 px-3 py-3 transition-colors ${status === "error" ? "border-[#ff5630]" : "border-[#f4eee4]/15 focus-within:border-[#ff5630]"}`}><Link2 size={16} className="shrink-0 text-[#8e8983]" /><input id="source" value={url} onChange={(event) => handleUrlChange(event.target.value)} className="mono min-w-0 flex-1 truncate bg-transparent text-[11px] text-[#f4eee4] outline-none placeholder:text-[#6c6863]" spellCheck={false} placeholder="https://example.com/movie.mp4" /></div>
+              <div className={`relative mt-2 border bg-black/20 transition-colors ${status === "error" ? "border-[#ff5630]" : "border-[#f4eee4]/15 focus-within:border-[#ff5630]"}`}>
+                {suggestion ? (
+                  <div aria-hidden="true" ref={ghostRef} className="pointer-events-none absolute inset-0 overflow-hidden">
+                    <div className="flex min-h-full w-max min-w-full items-center gap-2 px-3">
+                      <span className="w-4 shrink-0" />
+                      <span className="mono whitespace-pre text-[11px]"><span className="text-transparent">{url}</span><span className="text-[#5f5b56]">{suggestion.slice(url.length)}</span></span>
+                    </div>
+                  </div>
+                ) : null}
+                <div className="relative flex items-center gap-2 px-3 py-3"><Link2 size={16} className="shrink-0 text-[#8e8983]" /><input id="source" value={url} onChange={(event) => handleUrlChange(event.target.value)} onScroll={(event) => { if (ghostRef.current) ghostRef.current.scrollLeft = event.currentTarget.scrollLeft; }} onKeyDown={(event) => { if (!suggestion) return; if (event.key === "Tab" || (event.key === "ArrowRight" && event.currentTarget.selectionStart === url.length)) { event.preventDefault(); acceptSuggestion(); } }} className="mono min-w-0 flex-1 truncate bg-transparent text-[11px] text-[#f4eee4] outline-none placeholder:text-[#6c6863]" spellCheck={false} placeholder="https://example.com/movie.mp4" /></div>
+              </div>
               <p className={`mono mt-1.5 min-h-3 text-[9px] ${status === "error" ? "text-[#ff9078]" : "text-[#77736d]"}`}>{status === "error" ? "Enter a complete HTTP or HTTPS URL." : "HTTPS and HTTP links are supported."}</p>
 
               <div className="ml-2 mt-4 h-7 border-l border-[#f4eee4]/15"><div className="relative top-[18px] -left-[3px] h-1.5 w-1.5 rounded-full bg-[#ff5630] shadow-[0_0_12px_rgba(255,86,48,.75)]" /></div>
