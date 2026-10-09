@@ -6,6 +6,15 @@
 if (typeof importScripts === "function") importScripts("config.js");
 
 const MENU_ID = "streamlink-save-link";
+const HOSTED_HANDOFF_URL = "https://mhasanbogura.github.io/streamlinksaver/";
+
+function withTimeout(promise, ms, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out`)), ms);
+  });
+  return Promise.race([promise.finally(() => clearTimeout(timer)), timeout]);
+}
 
 function normalizeSavePath(value) {
   const parts = String(value || "")
@@ -116,15 +125,35 @@ async function ensureOffscreenDocument() {
   }
 }
 
+async function openHandoffFallback(url, filename) {
+  // Proven backup: the hosted page downloads the .strm with the right name
+  // into Downloads root (no subfolder). Used only when the direct path fails.
+  const handoffUrl = new URL(HOSTED_HANDOFF_URL);
+  handoffUrl.searchParams.set("handoff", "1");
+  handoffUrl.searchParams.set("streamUrl", url);
+  handoffUrl.searchParams.set("filename", filename);
+  const handoffTab = await chrome.tabs.create({ url: handoffUrl.href, active: false });
+  if (handoffTab?.id) {
+    setTimeout(() => chrome.tabs.remove(handoffTab.id).catch(() => {}), 7000);
+  }
+}
+
 async function queueSave(url, filename) {
   const finalPath = buildDownloadPath(filename, await getActiveSaveFolder());
-  await ensureOffscreenDocument();
-  const response = await chrome.runtime.sendMessage({
-    type: "streamlink-offscreen-save",
-    url,
-    finalPath,
-  });
-  if (!response?.ok) throw new Error(response?.error || "download failed");
+  try {
+    await ensureOffscreenDocument();
+    const response = await withTimeout(
+      chrome.runtime.sendMessage({ type: "streamlink-offscreen-save", url, finalPath }),
+      20000,
+      "offscreen save"
+    );
+    if (!response?.ok) throw new Error(response?.error || "download failed");
+  } catch (error) {
+    console.error("StreamLink Saver direct save failed, using handoff fallback:", error);
+    await openHandoffFallback(url, filename);
+    showNotification(`Saved ${filename} to Downloads/ (subfolder unavailable)`);
+    return filename;
+  }
   showNotification(`Saved to Downloads/${finalPath}`);
   return finalPath;
 }

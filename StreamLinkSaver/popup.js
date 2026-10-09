@@ -89,6 +89,30 @@ async function useCurrentPage() {
   }
 }
 
+function withTimeout(promise, ms, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out`)), ms);
+  });
+  return Promise.race([promise.finally(() => clearTimeout(timer)), timeout]);
+}
+
+function fallbackAnchorDownload(url, filename) {
+  // Last resort inside the popup itself: pure DOM download, no extension
+  // APIs involved. Lands in Downloads root with the right name.
+  const blobUrl = URL.createObjectURL(new Blob([`${url.trim()}\n`], { type: "text/plain" }));
+  try {
+    const anchor = document.createElement("a");
+    anchor.href = blobUrl;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+  }
+}
+
 async function saveStreamFile() {
   const url = sourceUrl.value.trim();
   if (!isSupportedUrl(url)) {
@@ -102,13 +126,25 @@ async function saveStreamFile() {
   saveButton.disabled = true;
   setStatus("Preparing the .strm file…");
   try {
-    const response = await chrome.runtime.sendMessage({ type: "streamlink-save", url, filename });
-    if (!response?.ok) throw new Error(response?.error || "handoff failed");
+    const response = await withTimeout(
+      chrome.runtime.sendMessage({ type: "streamlink-save", url, filename }),
+      25000,
+      "background save"
+    );
+    if (!response?.ok) throw new Error(response?.error || "background save failed");
     statusDot.className = "status-dot success";
     setStatus(`Saving to Downloads/${response.finalPath}`, "success");
-  } catch {
-    statusDot.className = "status-dot ready";
-    setStatus("The browser could not create the file. Try again.", "error");
+  } catch (error) {
+    const reason = String(error?.message || error).slice(0, 140);
+    console.error("StreamLink Saver background save failed:", error);
+    try {
+      fallbackAnchorDownload(url, filename);
+      statusDot.className = "status-dot success";
+      setStatus(`Saved ${filename} to Downloads/ (direct path failed: ${reason})`, "success");
+    } catch {
+      statusDot.className = "status-dot ready";
+      setStatus(`Could not create the file: ${reason}`, "error");
+    }
   } finally {
     saveButton.disabled = false;
   }
