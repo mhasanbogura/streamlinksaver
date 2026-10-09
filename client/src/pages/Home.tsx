@@ -1,6 +1,6 @@
 /* Broadcast Atelier: an editorial companion page that previews the compact extension as a premium studio instrument. */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Copy, Download, ExternalLink, FileText, Link2, MonitorUp } from "lucide-react";
+import { Download, FileText, Link2 } from "lucide-react";
 
 const textureUrl = "/manus-storage/streamlink-calibration-texture_1972e42a.png";
 const signalFieldUrl = "/manus-storage/streamlink-signal-field_5d5e2101.png";
@@ -47,7 +47,6 @@ export default function Home() {
   const [name, setName] = useState("movie");
   const [status, setStatus] = useState<"ready" | "success" | "error">("ready");
   const [message, setMessage] = useState("Ready to route a URL.");
-  const [copied, setCopied] = useState(false);
   const [extVersion, setExtVersion] = useState(FALLBACK_VERSION);
   const handoffCompleted = useRef(false);
   const handoff = useMemo(() => {
@@ -101,12 +100,6 @@ export default function Home() {
     setMessage(`Saved ${filename}`);
   };
 
-  const copyText = async () => {
-    await navigator.clipboard?.writeText(url);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1300);
-  };
-
   return (
     <main className="min-h-screen overflow-hidden bg-[#111110] text-[#f4eee4]">
       <div className="pointer-events-none fixed inset-0 opacity-[0.065] mix-blend-screen" style={{ backgroundImage: `url(${textureUrl})`, backgroundSize: "420px" }} />
@@ -115,19 +108,19 @@ export default function Home() {
           <img src={markUrl} className="h-10 w-10" alt="" />
           <div>
             <p className="m-0 text-[17px] font-semibold tracking-[-0.06em]">StreamLink Saver</p>
-            <p className="mono m-0 mt-0.5 text-[9px] tracking-[0.18em] text-[#7e7a74]">SAVER / BROWSER EXTENSION</p>
+            <p className="mono m-0 mt-0.5 text-[9px] tracking-[0.18em] text-[#7e7a74]">BROWSER EXTENSION</p>
           </div>
         </div>
-        <a className="mono flex items-center gap-2 border border-[#f4eee4]/15 px-3 py-2 text-[10px] tracking-[0.08em] text-[#cfc8bd] transition-colors hover:border-[#ff5630] hover:text-[#ff8467]" href={ZIP_URL} target="_blank" rel="noreferrer">
-          INSTALL IN BROWSER <ExternalLink size={12} />
+        <a className="mono flex items-center gap-2 border border-[#f4eee4]/15 px-3 py-2 text-[10px] tracking-[0.08em] text-[#cfc8bd] transition-colors hover:border-[#ff5630] hover:text-[#ff8467]" href="#install">
+          INSTALL IN BROWSER
         </a>
       </header>
 
       <section className="relative z-10 mx-auto grid max-w-[1380px] gap-14 px-6 pb-20 pt-9 lg:grid-cols-[1fr_560px] lg:items-center lg:px-10 lg:pb-32 lg:pt-20">
         <div className="max-w-[630px]">
           <p className="mono mb-5 text-[10px] tracking-[0.18em] text-[#ff8062]">STREAMING URL / LOCAL OUTPUT</p>
-          <h1 className="m-0 text-[clamp(3.7rem,7vw,7.1rem)] font-semibold leading-[.84] tracking-[-0.09em]">Route a stream<br />into your <span className="font-serif font-normal italic text-[#ff5630]">library.</span></h1>
-          <p className="mt-8 max-w-[470px] text-[17px] leading-7 text-[#aaa59e]">A small browser extension for writing a streaming link into a media-library-ready <span className="mono text-[#ded7cc]">.strm</span> file. No media is downloaded or handled.</p>
+          <h1 className="m-0 text-[clamp(3.7rem,7vw,7.1rem)] font-semibold leading-[.84] tracking-[-0.09em]">Route a stream into your <span className="font-serif font-normal italic text-[#ff5630]">library.</span></h1>
+          <p className="mt-8 max-w-[470px] text-[17px] leading-7 text-[#aaa59e]">A lightweight browser extension that saves streaming URLs as media-library-ready <span className="mono text-[#ded7cc]">.strm</span> files. No media is downloaded or processed.</p>
           <div className="mt-10 flex flex-wrap gap-x-7 gap-y-4 border-y border-[#f4eee4]/10 py-5 mono text-[10px] tracking-[0.08em] text-[#928d86]">
             <span className="flex items-center gap-2"><i className="h-1.5 w-1.5 rounded-full bg-[#8ecf91] shadow-[0_0_8px_rgba(142,207,145,.7)]" /> LOCAL FILE CREATION</span>
             <span>HTTP + HTTPS URLs</span>
@@ -140,7 +133,7 @@ export default function Home() {
           <div className="absolute left-0 right-0 top-0 h-[3px] bg-[#ff5630]" />
           <div className="border border-[#f4eee4]/15 bg-[#181817] p-5">
             <div className="flex items-center justify-between border-b border-[#f4eee4]/10 pb-4">
-              <div className="flex items-center gap-2.5"><img src={markUrl} className="h-7 w-7" alt="" /><div><p className="m-0 text-sm font-semibold tracking-[-.05em]">StreamLink Saver</p><p className="mono m-0 mt-1 text-[8px] tracking-[.14em] text-[#77736d]">SAVER / {extVersion}</p></div></div>
+              <div className="flex items-center gap-2.5"><img src={markUrl} className="h-7 w-7" alt="" /><div><p className="m-0 text-sm font-semibold tracking-[-.05em]">StreamLink Saver</p><p className="mono m-0 mt-1 text-[8px] tracking-[.14em] text-[#77736d]">{extVersion}</p></div></div>
               <span className="mono inline-flex items-center gap-1.5 border border-[#f4eee4]/10 px-2 py-1 text-[8px] tracking-[.12em] text-[#9f9a92]"><i className="h-1 w-1 rounded-full bg-[#8ecf91]" />LOCAL</span>
             </div>
             <div className="pt-7">
@@ -149,7 +142,7 @@ export default function Home() {
               <p className="mt-2 text-xs leading-5 text-[#99948d]">The file stores the URL only. It does not download the media.</p>
 
               <div className="mt-6 flex items-center justify-between"><label htmlFor="source" className="mono text-[9px] tracking-[.14em] text-[#aaa49c]">SOURCE URL</label><button type="button" onClick={() => handleUrlChange("https://example.com/movie.mp4")} className="mono text-[9px] text-[#ded7cc] hover:text-[#ff8062]">Use example</button></div>
-              <div className={`mt-2 flex items-center gap-2 border bg-black/20 px-3 py-3 transition-colors ${status === "error" ? "border-[#ff5630]" : "border-[#f4eee4]/15 focus-within:border-[#ff5630]"}`}><Link2 size={16} className="shrink-0 text-[#8e8983]" /><input id="source" value={url} onChange={(event) => handleUrlChange(event.target.value)} className="mono min-w-0 flex-1 bg-transparent text-[11px] text-[#f4eee4] outline-none placeholder:text-[#6c6863]" spellCheck={false} placeholder="https://example.com/movie.mp4" /></div>
+              <div className={`mt-2 flex items-center gap-2 border bg-black/20 px-3 py-3 transition-colors ${status === "error" ? "border-[#ff5630]" : "border-[#f4eee4]/15 focus-within:border-[#ff5630]"}`}><Link2 size={16} className="shrink-0 text-[#8e8983]" /><input id="source" value={url} onChange={(event) => handleUrlChange(event.target.value)} className="mono min-w-0 flex-1 truncate bg-transparent text-[11px] text-[#f4eee4] outline-none placeholder:text-[#6c6863]" spellCheck={false} placeholder="https://example.com/movie.mp4" /></div>
               <p className={`mono mt-1.5 min-h-3 text-[9px] ${status === "error" ? "text-[#ff9078]" : "text-[#77736d]"}`}>{status === "error" ? "Enter a complete HTTP or HTTPS URL." : "HTTPS and HTTP links are supported."}</p>
 
               <div className="ml-2 mt-4 h-7 border-l border-[#f4eee4]/15"><div className="relative top-[18px] -left-[3px] h-1.5 w-1.5 rounded-full bg-[#ff5630] shadow-[0_0_12px_rgba(255,86,48,.75)]" /></div>
@@ -163,19 +156,14 @@ export default function Home() {
       </section>
 
       <section className="relative z-10 border-t border-[#f4eee4]/10 bg-[#151514]" id="install">
-        <div className="mx-auto grid max-w-[1380px] gap-10 px-6 py-16 lg:grid-cols-[1.25fr_.75fr] lg:px-10 lg:py-20">
-          <div>
-            <p className="mono m-0 text-[10px] tracking-[.16em] text-[#ff8062]">THE OUTPUT, UNCOMPLICATED</p>
-            <div className="mt-6 overflow-hidden border border-[#f4eee4]/15 bg-[#0e0e0d]"><div className="flex items-center justify-between border-b border-[#f4eee4]/10 px-5 py-3 mono text-[9px] tracking-[.12em] text-[#908b84]"><span>{filename}</span><button onClick={copyText} type="button" className="flex items-center gap-2 hover:text-[#ff8062]">{copied ? <Check size={13} /> : <Copy size={13} />}{copied ? "COPIED" : "COPY URL"}</button></div><pre className="m-0 overflow-x-auto px-5 py-6 mono text-[13px] leading-6 text-[#e8e0d4]">{url || "https://example.com/movie.mp4"}</pre></div>
-          </div>
-          <div className="border-l-0 border-[#f4eee4]/10 lg:border-l lg:pl-10"><p className="mono m-0 text-[10px] tracking-[.16em] text-[#a29d95]">SETUP GUIDE</p>
+        <div className="mx-auto max-w-[860px] px-6 py-16 lg:px-10 lg:py-20">
+          <div><p className="mono m-0 text-[10px] tracking-[.16em] text-[#a29d95]">SETUP GUIDE</p>
             <a href={ZIP_URL} target="_blank" rel="noreferrer" className="mt-5 flex items-center justify-between bg-[#ff5630] px-4 py-3 text-[12px] font-semibold tracking-[-.01em] text-[#1b0b07] transition-all hover:bg-[#ff704e] active:scale-[.98]">Download StreamLinkSaver.zip<Download size={16} /></a>
             <p className="mono m-0 mt-3 text-[9px] leading-4 text-[#77736d]">Direct download, always the latest release. Extract it, then follow your browser below.</p>
-            <p className="mono m-0 mt-7 text-[10px] tracking-[.16em] text-[#e8e0d4]">CHROME</p>
+            <p className="mono m-0 mt-7 text-[10px] tracking-[.16em] text-[#e8e0d4]">CHROME / CHROMIUM BASED</p>
             <ol className="mt-3 space-y-2.5 pl-5 text-sm leading-6 text-[#aaa59e]"><li>Open <span className="mono text-[#e8e0d4]">chrome://extensions</span> and enable Developer mode.</li><li>Select <span className="text-[#e8e0d4]">Load unpacked</span>, then choose the extracted <span className="mono text-[#e8e0d4]">Stream Link Saver/Chrome</span> folder.</li><li>Pin StreamLink Saver, right-click any media link and choose <span className="text-[#e8e0d4]">Save Stream Link</span>.</li></ol>
             <p className="mono m-0 mt-7 text-[10px] tracking-[.16em] text-[#e8e0d4]">FIREFOX</p>
             <ol className="mt-3 space-y-2.5 pl-5 text-sm leading-6 text-[#aaa59e]"><li>Open <span className="mono text-[#e8e0d4]">about:debugging#/runtime/this-firefox</span>.</li><li>Select <span className="text-[#e8e0d4]">Load Temporary Add-on</span>, then choose <span className="mono text-[#e8e0d4]">Stream Link Saver/Firefox/manifest.json</span>.</li><li>Temporary add-ons unload on restart — repeat step 2 after restarting Firefox.</li></ol>
-            <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-2 mono text-[10px] tracking-[.1em] text-[#8ecf91]"><span className="flex items-center gap-2"><MonitorUp size={14} /> READY FOR CHROME</span><span className="flex items-center gap-2"><MonitorUp size={14} /> READY FOR FIREFOX</span></div>
           </div>
         </div>
       </section>
