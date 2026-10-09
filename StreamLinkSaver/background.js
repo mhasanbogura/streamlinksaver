@@ -91,15 +91,23 @@ function buildDownloadPath(filename, folder) {
 async function queueDirectSave(url, filename) {
   const finalPath = buildDownloadPath(filename, await getActiveSaveFolder());
   // Filename (including subfolder) is assigned here at creation time.
-  // data: URLs are ignored by download-manager extensions, so no other
-  // extension ever joins the filename determination — no conflicts.
-  const dataUrl = `data:text/plain;charset=utf-8,${encodeURIComponent(url)}`;
-  await chrome.downloads.download({
-    url: dataUrl,
-    filename: finalPath,
-    conflictAction: "uniquify",
-    saveAs: false,
-  });
+  // A blob: URL is used because Chrome ignores the filename parameter for
+  // data: URLs (they always land as download.txt). Like data: URLs, blob:
+  // URLs are ignored by download-manager extensions, so no other extension
+  // ever joins the filename determination — no conflicts.
+  const blobUrl = URL.createObjectURL(
+    new Blob([`${url.trim()}\n`], { type: "text/plain" })
+  );
+  try {
+    await chrome.downloads.download({
+      url: blobUrl,
+      filename: finalPath,
+      conflictAction: "uniquify",
+      saveAs: false,
+    });
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+  }
   showNotification(`Saved to Downloads/${finalPath}`);
   return finalPath;
 }
