@@ -98,15 +98,21 @@ async function ensureOffscreenDocument() {
   } catch {
     // hasDocument unavailable on older Chrome: fall through to create.
   }
-  try {
-    await chrome.offscreen.createDocument({
-      url: "offscreen.html",
-      reasons: ["BLOBS"],
-      justification: "Build the .strm file blob so Chrome honors its filename.",
-    });
-  } catch (error) {
-    // Already exists (raced recreation): safe to proceed.
-    if (!String(error?.message || error).includes("single")) throw error;
+  const attempts = [["BLOBS"], ["DOM_SCRAPING"]];
+  for (const reasons of attempts) {
+    try {
+      await chrome.offscreen.createDocument({
+        url: "offscreen.html",
+        reasons,
+        justification: "Build the .strm file blob so Chrome honors its filename.",
+      });
+      return;
+    } catch (error) {
+      // Already exists after a raced recreation: safe to proceed.
+      if (String(error?.message || error).includes("single")) return;
+      if (reasons !== attempts[attempts.length - 1]) continue;
+      throw error;
+    }
   }
 }
 
@@ -136,6 +142,11 @@ async function setUpMenu() {
 chrome.runtime.onInstalled.addListener(() => {
   setUpMenu().catch((error) => console.warn("Could not create StreamLink Saver menu", error));
 });
+
+// Recreate the menu on every service-worker start. onInstalled/onStartup do
+// not fire on a manual Reload, which used to leave right-click saving missing
+// until the next browser restart.
+setUpMenu().catch((error) => console.warn("Could not create StreamLink Saver menu", error));
 
 chrome.runtime.onStartup.addListener(() => {
   setUpMenu().catch((error) => console.warn("Could not restore StreamLink Saver menu", error));

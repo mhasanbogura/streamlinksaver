@@ -27,6 +27,7 @@ button { cursor: pointer; }
 .masthead { position: relative; display: flex; align-items: center; justify-content: space-between; padding-bottom: 18px; }
 .brand-lockup { display: flex; align-items: center; gap: 9px; }
 .brand-mark { width: 28px; height: 28px; color: var(--ink); }
+img.brand-mark { border-radius: 7px; }
 .brand-lockup h1 { margin: 0; font-size: 14px; line-height: 1; letter-spacing: -.04em; font-weight: 680; }
 .brand-lockup p, .local-badge { margin: 5px 0 0; color: var(--quiet); font-family: var(--mono); font-size: 8px; letter-spacing: .13em; }
 .masthead-actions { display: flex; align-items: center; gap: 7px; }

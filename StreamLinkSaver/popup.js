@@ -15,7 +15,7 @@ let fileNameWasEdited = false;
 try {
   const versionEl = document.querySelector("#app-version");
   const manifestVersion = chrome.runtime.getManifest()?.version;
-  if (versionEl && manifestVersion) versionEl.textContent = `SAVER / v${manifestVersion}`;
+  if (versionEl && manifestVersion) versionEl.textContent = `v${manifestVersion}`;
 } catch {
   // Popup works fine without the version stamp.
 }
