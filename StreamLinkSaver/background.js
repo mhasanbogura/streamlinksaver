@@ -1,39 +1,10 @@
-/* StreamLink Saver: a hidden extension tab performs the .strm download with
- * its final name and folder assigned at creation. Extension tabs have full
- * chrome.downloads access on every Chrome version (no offscreen API needed),
- * and blob: URLs are ignored by download-manager extensions, so nothing
- * fights over the name. */
+/* Broadcast Atelier: hosted download route with event-time filename assignment for dependable local .strm output. */
 if (typeof importScripts === "function") importScripts("config.js");
 
 const MENU_ID = "streamlink-save-link";
 const HOSTED_HANDOFF_URL = "https://mhasanbogura.github.io/streamlinksaver/";
-
-function withTimeout(promise, ms, label) {
-  let timer;
-  const timeout = new Promise((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`${label} timed out`)), ms);
-  });
-  return Promise.race([promise.finally(() => clearTimeout(timer)), timeout]);
-}
-
-const settle = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-// Exact download-id -> wanted path for OUR OWN downloads only. The listener
-// below never touches anything else (sync decline), so conflicts are
-// impossible by construction.
-const pendingNames = new Map();
-
-function landedOk(landed, finalPath) {
-  const dir = finalPath.includes("/") ? finalPath.slice(0, finalPath.lastIndexOf("/")) : "";
-  const base = finalPath.split("/").pop().replace(/\.strm$/i, "");
-  const landedDir = landed.includes("/") ? landed.slice(0, landed.lastIndexOf("/")) : "";
-  const landedTail = landed.split("/").pop();
-  return (
-    landedDir === dir &&
-    landedTail.toLowerCase().endsWith(".strm") &&
-    landedTail.toLowerCase().startsWith(base.toLowerCase().slice(0, 20))
-  );
-}
+const PENDING_SAVES_KEY = "streamlinkPendingSaves";
+const transientStorage = chrome.storage.session || chrome.storage.local;
 
 function normalizeSavePath(value) {
   const parts = String(value || "")
@@ -120,79 +91,47 @@ function buildDownloadPath(filename, folder) {
   return folder ? `${folder}/${filename}` : filename;
 }
 
-async function openHandoffFallback(url, filename) {
-  // Proven backup: the hosted page downloads the .strm with the right name
-  // into Downloads root (no subfolder). Used only when the direct path fails.
+async function getPendingSaves() {
+  const { [PENDING_SAVES_KEY]: pending = [] } = await transientStorage.get({ [PENDING_SAVES_KEY]: [] });
+  return Array.isArray(pending) ? pending : [];
+}
+
+async function setPendingSaves(pending) {
+  await transientStorage.set({ [PENDING_SAVES_KEY]: pending.slice(-8) });
+}
+
+async function queueHostedSave(url, filename) {
+  const finalPath = buildDownloadPath(filename, await getActiveSaveFolder());
+  const pending = await getPendingSaves();
+  pending.push({ finalPath, createdAt: Date.now() });
+  await setPendingSaves(pending);
+
   const handoffUrl = new URL(HOSTED_HANDOFF_URL);
   handoffUrl.searchParams.set("handoff", "1");
   handoffUrl.searchParams.set("streamUrl", url);
   handoffUrl.searchParams.set("filename", filename);
   const handoffTab = await chrome.tabs.create({ url: handoffUrl.href, active: false });
-  if (handoffTab?.id) {
+  showNotification(`Preparing ${finalPath}…`, "handoff");
+  if (handoffTab.id) {
     setTimeout(() => chrome.tabs.remove(handoffTab.id).catch(() => {}), 7000);
   }
+  return finalPath;
 }
 
-async function queueSave(url, filename) {
-  const finalPath = buildDownloadPath(filename, await getActiveSaveFolder());
-  const dataUrl = `data:text/plain;charset=utf-8,${encodeURIComponent(url)}`;
-  let downloadId = null;
-  try {
-    // data: URLs always start downloading (never "not saving"); the wanted
-    // path is enforced by the listener below, verified, then repaired.
-    downloadId = await withTimeout(
-      chrome.downloads.download({
-        url: dataUrl,
-        filename: finalPath,
-        conflictAction: "uniquify",
-        saveAs: false,
-      }),
-      20000,
-      "start download"
-    );
-  } catch (error) {
-    console.error("StreamLink Saver download failed, using handoff fallback:", error);
-    await openHandoffFallback(url, filename);
-    showNotification(`Saved ${filename} to Downloads/ (subfolder unavailable)`);
-    return filename;
-  }
-  pendingNames.set(downloadId, finalPath);
-  setTimeout(() => pendingNames.delete(downloadId), 60000);
-  await settle(2000);
-  try {
-    const results = await chrome.downloads.search({ id: downloadId });
-    const landed = results?.[0]?.filename || "";
-    if (landedOk(landed, finalPath)) {
-      showNotification(`Saved to Downloads/${landed}`);
-      return finalPath;
+chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
+  (async () => {
+    const pending = await getPendingSaves();
+    const next = pending.shift();
+    if (!next) {
+      suggest();
+      return;
     }
-    try {
-      await chrome.downloads.removeFile(downloadId);
-    } catch {}
-    try {
-      await chrome.downloads.erase({ id: downloadId });
-    } catch {}
-  } catch (error) {
-    console.warn("StreamLink Saver verify failed, using handoff fallback:", error);
-  }
-  await openHandoffFallback(url, filename);
-  showNotification(`Saved ${filename} to Downloads/ (subfolder unavailable)`);
-  return filename;
-}
-
-if (chrome.downloads.onDeterminingFilename) {
-  chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
-    // Only our own downloads (started via downloads.download above carry our
-    // extension id). Everything else declines synchronously without even
-    // calling suggest, so we can never conflict with other extensions.
-    if (!downloadItem || downloadItem.byExtensionId !== chrome.runtime.id) return undefined;
-    const want = pendingNames.get(downloadItem.id);
-    if (!want) return undefined;
-    pendingNames.delete(downloadItem.id);
-    suggest({ filename: want, conflictAction: "uniquify" });
-    return true;
-  });
-}
+    await setPendingSaves(pending);
+    suggest({ filename: next.finalPath, conflictAction: "uniquify" });
+    showNotification(`Saved to Downloads/${next.finalPath}`);
+  })().catch(() => suggest());
+  return true;
+});
 
 async function setUpMenu() {
   await chrome.contextMenus.removeAll();
@@ -208,8 +147,8 @@ chrome.runtime.onInstalled.addListener(() => {
   setUpMenu().catch((error) => console.warn("Could not create StreamLink Saver menu", error));
 });
 
-// Recreate the menu on every service-worker start. onInstalled/onStartup do
-// not fire on a manual Reload, which used to leave right-click saving missing
+// Recreate the menu on every service-worker start: onInstalled/onStartup do
+// not fire on a manual Reload, which would leave right-click saving missing
 // until the next browser restart.
 setUpMenu().catch((error) => console.warn("Could not create StreamLink Saver menu", error));
 
@@ -220,7 +159,7 @@ chrome.runtime.onStartup.addListener(() => {
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type !== "streamlink-save" || !isSupportedUrl(message.url)) return;
   const filename = sanitizeFileBase(message.filename || "stream") + ".strm";
-  queueSave(message.url, filename)
+  queueHostedSave(message.url, filename)
     .then((finalPath) => sendResponse({ ok: true, finalPath }))
     .catch((error) => sendResponse({ ok: false, error: String(error?.message || error) }));
   return true;
@@ -238,8 +177,8 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         // Content scripts are unavailable on browser-managed pages; the URL fallback remains available.
       }
     }
-    await queueSave(info.linkUrl, filenameFromLabel(label, info.linkUrl));
+    await queueHostedSave(info.linkUrl, filenameFromLabel(label, info.linkUrl));
   } catch (error) {
-    console.warn("StreamLink Saver could not save the .strm file", error);
+    console.warn("StreamLink Saver could not open the hosted .strm download handoff", error);
   }
 });
