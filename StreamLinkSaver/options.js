@@ -44,6 +44,7 @@ resetButton.addEventListener("click", async () => {
   setStatus(`Reset to ${input.value}`, "success");
 });
 saveButton.addEventListener("click", () => save().catch(() => setStatus("Could not save this path.", "error")));
+input.addEventListener("change", () => save().catch(() => setStatus("Could not save this path.", "error")));
 notificationsInput.addEventListener("change", () => save().catch(() => setStatus("Could not save settings.", "error")));
 load().catch(() => setStatus("Could not load settings.", "error"));
 

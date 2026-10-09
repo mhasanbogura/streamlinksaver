@@ -43,6 +43,8 @@ SHARED_FILES = [
     "options.css",
     "options.html",
     "options.js",
+    "offscreen.html",
+    "offscreen.js",
     "popup.css",
     "popup.html",
     "popup.js",

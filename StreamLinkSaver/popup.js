@@ -11,6 +11,15 @@ const settingsButton = document.querySelector("#settings-button");
 
 let fileNameWasEdited = false;
 
+// Stamp the real extension version (manifest) into the header.
+try {
+  const versionEl = document.querySelector("#app-version");
+  const manifestVersion = chrome.runtime.getManifest()?.version;
+  if (versionEl && manifestVersion) versionEl.textContent = `SAVER / v${manifestVersion}`;
+} catch {
+  // Popup works fine without the version stamp.
+}
+
 function sanitizeFileBase(value) {
   const cleaned = value
     .replace(/\.strm$/i, "")
