@@ -1,7 +1,11 @@
-/* StreamLink Saver: direct .strm download with filename assigned at creation. No onDeterminingFilename listener, so other download-manager extensions can never fight over the name. */
+/* StreamLink Saver: the hosted handoff page performs the .strm download (page-context blob + filename, which Chrome always honors). A filename listener only places it into the chosen subfolder — and it stays completely out of every other download's way. */
 if (typeof importScripts === "function") importScripts("config.js");
 
 const MENU_ID = "streamlink-save-link";
+const HOSTED_HANDOFF_URL = "https://mhasanbogura.github.io/streamlinksaver/";
+const HOSTED_PREFIX = "https://mhasanbogura.github.io/streamlinksaver/";
+const PENDING_SAVES_KEY = "streamlinkPendingSaves";
+const transientStorage = chrome.storage.session || chrome.storage.local;
 
 function normalizeSavePath(value) {
   const parts = String(value || "")
@@ -88,28 +92,64 @@ function buildDownloadPath(filename, folder) {
   return folder ? `${folder}/${filename}` : filename;
 }
 
-async function queueDirectSave(url, filename) {
+async function getPendingSaves() {
+  const { [PENDING_SAVES_KEY]: pending = [] } = await transientStorage.get({ [PENDING_SAVES_KEY]: [] });
+  return Array.isArray(pending) ? pending : [];
+}
+
+async function setPendingSaves(pending) {
+  await transientStorage.set({ [PENDING_SAVES_KEY]: pending.slice(-8) });
+}
+
+async function queueHostedSave(url, filename) {
   const finalPath = buildDownloadPath(filename, await getActiveSaveFolder());
-  // Filename (including subfolder) is assigned here at creation time.
-  // A blob: URL is used because Chrome ignores the filename parameter for
-  // data: URLs (they always land as download.txt). Like data: URLs, blob:
-  // URLs are ignored by download-manager extensions, so no other extension
-  // ever joins the filename determination — no conflicts.
-  const blobUrl = URL.createObjectURL(
-    new Blob([`${url.trim()}\n`], { type: "text/plain" })
-  );
-  try {
-    await chrome.downloads.download({
-      url: blobUrl,
-      filename: finalPath,
-      conflictAction: "uniquify",
-      saveAs: false,
-    });
-  } finally {
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+  const pending = (await getPendingSaves()).filter((entry) => Date.now() - (entry.createdAt || 0) < 60000);
+  pending.push({ finalPath, createdAt: Date.now() });
+  await setPendingSaves(pending);
+
+  const handoffUrl = new URL(HOSTED_HANDOFF_URL);
+  handoffUrl.searchParams.set("handoff", "1");
+  handoffUrl.searchParams.set("streamUrl", url);
+  handoffUrl.searchParams.set("filename", filename);
+  const handoffTab = await chrome.tabs.create({ url: handoffUrl.href, active: false });
+  if (handoffTab?.id) {
+    setTimeout(() => chrome.tabs.remove(handoffTab.id).catch(() => {}), 7000);
   }
-  showNotification(`Saved to Downloads/${finalPath}`);
   return finalPath;
+}
+
+// Sync check only: is this download OUR handoff page's .strm file?
+// Anything else (normal downloads, other extensions' downloads) is declined
+// synchronously by returning undefined — we never join their determination,
+// so we can never conflict with them.
+function isOurHandoffDownload(item) {
+  if (!item) return false;
+  if (item.byExtensionId) return false;
+  if ((item.referrer || "").startsWith(HOSTED_PREFIX)) return true;
+  if ((item.url || "").startsWith(`blob:https://mhasanbogura.github.io/streamlinksaver/`)) return true;
+  return false;
+}
+
+if (chrome.downloads.onDeterminingFilename) {
+  chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
+    if (!isOurHandoffDownload(downloadItem)) return undefined;
+    (async () => {
+      const pending = (await getPendingSaves()).filter((entry) => Date.now() - (entry.createdAt || 0) < 60000);
+      const wantedTail = (downloadItem.filename || "").split(/[\\/]/).pop();
+      let index = pending.findIndex((entry) => wantedTail && entry.finalPath.endsWith(wantedTail));
+      if (index < 0) index = 0;
+      const next = pending[index];
+      if (!next) {
+        suggest();
+        return;
+      }
+      pending.splice(index, 1);
+      await setPendingSaves(pending);
+      suggest({ filename: next.finalPath, conflictAction: "uniquify" });
+      showNotification(`Saved to Downloads/${next.finalPath}`);
+    })().catch(() => suggest());
+    return true;
+  });
 }
 
 async function setUpMenu() {
@@ -133,7 +173,7 @@ chrome.runtime.onStartup.addListener(() => {
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type !== "streamlink-save" || !isSupportedUrl(message.url)) return;
   const filename = sanitizeFileBase(message.filename || "stream") + ".strm";
-  queueDirectSave(message.url, filename)
+  queueHostedSave(message.url, filename)
     .then((finalPath) => sendResponse({ ok: true, finalPath }))
     .catch((error) => sendResponse({ ok: false, error: String(error?.message || error) }));
   return true;
@@ -151,8 +191,8 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         // Content scripts are unavailable on browser-managed pages; the URL fallback remains available.
       }
     }
-    await queueDirectSave(info.linkUrl, filenameFromLabel(label, info.linkUrl));
+    await queueHostedSave(info.linkUrl, filenameFromLabel(label, info.linkUrl));
   } catch (error) {
-    console.warn("StreamLink Saver could not save the .strm file", error);
+    console.warn("StreamLink Saver could not open the hosted .strm download handoff", error);
   }
 });
