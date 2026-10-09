@@ -138,7 +138,7 @@ async function queueSave(url, filename) {
     showNotification(`Saved ${filename} to Downloads/ (subfolder unavailable)`);
     return filename;
   }
-  showNotification(`Saved to Downloads/${finalPath}`);
+  // The saver tab notifies with the true landed path.
   return finalPath;
 }
 
