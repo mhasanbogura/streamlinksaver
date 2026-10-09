@@ -16,6 +16,25 @@ function withTimeout(promise, ms, label) {
   return Promise.race([promise.finally(() => clearTimeout(timer)), timeout]);
 }
 
+const settle = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Exact download-id -> wanted path for OUR OWN downloads only. The listener
+// below never touches anything else (sync decline), so conflicts are
+// impossible by construction.
+const pendingNames = new Map();
+
+function landedOk(landed, finalPath) {
+  const dir = finalPath.includes("/") ? finalPath.slice(0, finalPath.lastIndexOf("/")) : "";
+  const base = finalPath.split("/").pop().replace(/\.strm$/i, "");
+  const landedDir = landed.includes("/") ? landed.slice(0, landed.lastIndexOf("/")) : "";
+  const landedTail = landed.split("/").pop();
+  return (
+    landedDir === dir &&
+    landedTail.toLowerCase().endsWith(".strm") &&
+    landedTail.toLowerCase().startsWith(base.toLowerCase().slice(0, 20))
+  );
+}
+
 function normalizeSavePath(value) {
   const parts = String(value || "")
     .split(/[\\/]+/)
@@ -116,30 +135,63 @@ async function openHandoffFallback(url, filename) {
 
 async function queueSave(url, filename) {
   const finalPath = buildDownloadPath(filename, await getActiveSaveFolder());
+  const dataUrl = `data:text/plain;charset=utf-8,${encodeURIComponent(url)}`;
+  let downloadId = null;
   try {
-    // Hidden extension tab does the download: extension pages have full
-    // chrome.downloads access on every Chrome version (no offscreen API),
-    // and blob: URLs are ignored by download-manager extensions.
-    const saveUrl =
-      chrome.runtime.getURL("save.html") +
-      "#url=" + encodeURIComponent(url) +
-      "&path=" + encodeURIComponent(finalPath);
-    const saveTab = await withTimeout(
-      chrome.tabs.create({ url: saveUrl, active: false }),
+    // data: URLs always start downloading (never "not saving"); the wanted
+    // path is enforced by the listener below, verified, then repaired.
+    downloadId = await withTimeout(
+      chrome.downloads.download({
+        url: dataUrl,
+        filename: finalPath,
+        conflictAction: "uniquify",
+        saveAs: false,
+      }),
       20000,
-      "saver tab"
+      "start download"
     );
-    if (saveTab?.id) {
-      setTimeout(() => chrome.tabs.remove(saveTab.id).catch(() => {}), 9000);
-    }
   } catch (error) {
-    console.error("StreamLink Saver tab save failed, using handoff fallback:", error);
+    console.error("StreamLink Saver download failed, using handoff fallback:", error);
     await openHandoffFallback(url, filename);
     showNotification(`Saved ${filename} to Downloads/ (subfolder unavailable)`);
     return filename;
   }
-  // The saver tab notifies with the true landed path.
-  return finalPath;
+  pendingNames.set(downloadId, finalPath);
+  setTimeout(() => pendingNames.delete(downloadId), 60000);
+  await settle(2000);
+  try {
+    const results = await chrome.downloads.search({ id: downloadId });
+    const landed = results?.[0]?.filename || "";
+    if (landedOk(landed, finalPath)) {
+      showNotification(`Saved to Downloads/${landed}`);
+      return finalPath;
+    }
+    try {
+      await chrome.downloads.removeFile(downloadId);
+    } catch {}
+    try {
+      await chrome.downloads.erase({ id: downloadId });
+    } catch {}
+  } catch (error) {
+    console.warn("StreamLink Saver verify failed, using handoff fallback:", error);
+  }
+  await openHandoffFallback(url, filename);
+  showNotification(`Saved ${filename} to Downloads/ (subfolder unavailable)`);
+  return filename;
+}
+
+if (chrome.downloads.onDeterminingFilename) {
+  chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
+    // Only our own downloads (started via downloads.download above carry our
+    // extension id). Everything else declines synchronously without even
+    // calling suggest, so we can never conflict with other extensions.
+    if (!downloadItem || downloadItem.byExtensionId !== chrome.runtime.id) return undefined;
+    const want = pendingNames.get(downloadItem.id);
+    if (!want) return undefined;
+    pendingNames.delete(downloadItem.id);
+    suggest({ filename: want, conflictAction: "uniquify" });
+    return true;
+  });
 }
 
 async function setUpMenu() {
