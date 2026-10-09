@@ -1,8 +1,8 @@
-/* StreamLink Saver: the .strm file is downloaded with its final name and folder
- * assigned at creation. The blob is built in an offscreen document (a DOM
- * context, where Chrome honors the filename — service-worker blobs and
- * data: URLs do not get the right name), so no filename listener is needed
- * and no other extension can ever fight over the name. */
+/* StreamLink Saver: a hidden extension tab performs the .strm download with
+ * its final name and folder assigned at creation. Extension tabs have full
+ * chrome.downloads access on every Chrome version (no offscreen API needed),
+ * and blob: URLs are ignored by download-manager extensions, so nothing
+ * fights over the name. */
 if (typeof importScripts === "function") importScripts("config.js");
 
 const MENU_ID = "streamlink-save-link";
@@ -101,30 +101,6 @@ function buildDownloadPath(filename, folder) {
   return folder ? `${folder}/${filename}` : filename;
 }
 
-async function ensureOffscreenDocument() {
-  try {
-    if (await chrome.offscreen.hasDocument()) return;
-  } catch {
-    // hasDocument unavailable on older Chrome: fall through to create.
-  }
-  const attempts = [["BLOBS"], ["DOM_SCRAPING"]];
-  for (const reasons of attempts) {
-    try {
-      await chrome.offscreen.createDocument({
-        url: "offscreen.html",
-        reasons,
-        justification: "Build the .strm file blob so Chrome honors its filename.",
-      });
-      return;
-    } catch (error) {
-      // Already exists after a raced recreation: safe to proceed.
-      if (String(error?.message || error).includes("single")) return;
-      if (reasons !== attempts[attempts.length - 1]) continue;
-      throw error;
-    }
-  }
-}
-
 async function openHandoffFallback(url, filename) {
   // Proven backup: the hosted page downloads the .strm with the right name
   // into Downloads root (no subfolder). Used only when the direct path fails.
@@ -141,15 +117,23 @@ async function openHandoffFallback(url, filename) {
 async function queueSave(url, filename) {
   const finalPath = buildDownloadPath(filename, await getActiveSaveFolder());
   try {
-    await ensureOffscreenDocument();
-    const response = await withTimeout(
-      chrome.runtime.sendMessage({ type: "streamlink-offscreen-save", url, finalPath }),
+    // Hidden extension tab does the download: extension pages have full
+    // chrome.downloads access on every Chrome version (no offscreen API),
+    // and blob: URLs are ignored by download-manager extensions.
+    const saveUrl =
+      chrome.runtime.getURL("save.html") +
+      "#url=" + encodeURIComponent(url) +
+      "&path=" + encodeURIComponent(finalPath);
+    const saveTab = await withTimeout(
+      chrome.tabs.create({ url: saveUrl, active: false }),
       20000,
-      "offscreen save"
+      "saver tab"
     );
-    if (!response?.ok) throw new Error(response?.error || "download failed");
+    if (saveTab?.id) {
+      setTimeout(() => chrome.tabs.remove(saveTab.id).catch(() => {}), 9000);
+    }
   } catch (error) {
-    console.error("StreamLink Saver direct save failed, using handoff fallback:", error);
+    console.error("StreamLink Saver tab save failed, using handoff fallback:", error);
     await openHandoffFallback(url, filename);
     showNotification(`Saved ${filename} to Downloads/ (subfolder unavailable)`);
     return filename;
