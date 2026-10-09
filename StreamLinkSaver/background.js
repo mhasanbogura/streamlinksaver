@@ -3,6 +3,7 @@ if (typeof importScripts === "function") importScripts("config.js");
 
 const MENU_ID = "streamlink-save-link";
 const HOSTED_HANDOFF_URL = "https://mhasanbogura.github.io/streamlinksaver/";
+const HOSTED_PREFIX = "https://mhasanbogura.github.io/streamlinksaver/";
 const PENDING_SAVES_KEY = "streamlinkPendingSaves";
 const transientStorage = chrome.storage.session || chrome.storage.local;
 
@@ -118,14 +119,33 @@ async function queueHostedSave(url, filename) {
   return finalPath;
 }
 
+// Sync check only: is this download OUR handoff page's .strm file?
+// Anything else (normal downloads, other extensions' downloads) is declined
+// synchronously by returning undefined — we never join their determination,
+// so our queued name can never land on (or fight over) their file.
+function isOurHandoffDownload(item) {
+  if (!item) return false;
+  if (item.byExtensionId) return false;
+  if ((item.referrer || "").startsWith(HOSTED_PREFIX)) return true;
+  if ((item.url || "").startsWith("blob:https://mhasanbogura.github.io/streamlinksaver/")) return true;
+  return false;
+}
+
 chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
+  if (!isOurHandoffDownload(downloadItem)) return undefined;
   (async () => {
     const pending = await getPendingSaves();
-    const next = pending.shift();
+    // Match by filename tail so a queued name never applies to the wrong file,
+    // even if another download started in between.
+    const wantedTail = (downloadItem.filename || "").split(/[\\/]/).pop();
+    let index = pending.findIndex((entry) => wantedTail && entry.finalPath.endsWith(wantedTail));
+    if (index < 0) index = 0;
+    const next = pending[index];
     if (!next) {
       suggest();
       return;
     }
+    pending.splice(index, 1);
     await setPendingSaves(pending);
     suggest({ filename: next.finalPath, conflictAction: "uniquify" });
     showNotification(`Saved to Downloads/${next.finalPath}`);
